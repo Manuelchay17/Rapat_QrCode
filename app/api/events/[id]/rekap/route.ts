@@ -43,13 +43,14 @@ const formattedPeserta = absensi.map((p: any) => ({
   signature: p.signature_at_event || null,
 }));
 
-    return NextResponse.json({
-      event: {
-        ...event,
-        dateRaw: event.dateRaw || (event.date ? new Date(event.date).toLocaleDateString('id-ID', { dateStyle: 'long' }) : "-")
-      },
-      peserta: formattedPeserta,
-    });
+   return NextResponse.json({
+  event: {
+    ...event,
+    // Kita langsung pakai dateRaw karena properti 'date' tidak ada di schema
+    dateRaw: event.dateRaw || "-"
+  },
+  peserta: formattedPeserta,
+});
 
   } catch (error: any) {
     console.error("API Error:", error);
