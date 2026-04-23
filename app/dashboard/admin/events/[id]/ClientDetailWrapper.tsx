@@ -68,7 +68,7 @@ export default function ClientDetailWrapper({ eventData }: ClientDetailWrapperPr
   const displayUrl = useMemo(() => {
     if (typeof window === "undefined") return "";
     const baseUrl = window.location.origin;
-    const targetPath = isNoReg ? `/events/${eventData.id}` : `/register/${eventData.id}`;
+    const targetPath = isNoReg ? `/scan/${eventData.id}` : `/register/${eventData.id}`;
     return `${baseUrl}${targetPath}`;
   }, [eventData.id, isNoReg]);
 
