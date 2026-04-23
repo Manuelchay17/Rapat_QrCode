@@ -1,0 +1,1 @@
+Set-Content -Path ".\node_modules\prisma\build\types.js" -Value "exports.types = {};" -Encoding Ascii
