@@ -38,37 +38,21 @@ export default function RekapAbsensiPage() {
         format: "a4",
       });
 
-      // 1. KOP SURAT
-      doc.setFont("times", "bold");
-      doc.setFontSize(14);
-      doc.text("DAFTAR HADIR PERTEMUAN", 105, 20, { align: "center" });
-      doc.setFontSize(12);
-      doc.text(eventInfo?.title?.toUpperCase() || "JUDUL KEGIATAN", 105, 27, { align: "center" });
-
-      doc.setLineWidth(0.5);
-      doc.line(20, 32, 190, 32);
-      doc.setLineWidth(0.1);
-      doc.line(20, 33, 190, 33);
-
-      // 2. DETAIL KEGIATAN
-      doc.setFont("times", "normal");
-      doc.setFontSize(11);
-      doc.text(`Hari / Tanggal  : ${eventInfo?.dateRaw || "-"}`, 20, 42);
-      doc.text(`Waktu               : ${eventInfo?.time || "-"} WIB s/d Selesai`, 20, 48);
-      doc.text(`Tempat             : ${eventInfo?.location || "-"}`, 20, 54);
-
-      // 3. LOGIKA BARIS (MINIMAL 12 BARIS)
-      const tableRows = [...peserta];
-      while (tableRows.length < 12) {
-        tableRows.push({ isPlaceholder: true });
+      // Konfigurasi Tabel
+      const tableRowsForPDF = [...peserta];
+      if (tableRowsForPDF.length < 12) {
+        const diff = 12 - tableRowsForPDF.length;
+        for (let i = 0; i < diff; i++) {
+          tableRowsForPDF.push({ isPlaceholder: true });
+        }
       }
 
-      // 4. GENERATE TABEL
       autoTable(doc, {
-        startY: 62,
-        margin: { left: 20, right: 20, bottom: 40 },
+        // Tentukan posisi awal (hanya berlaku di halaman 1)
+        startY: 62, 
+        margin: { top: 20, left: 20, right: 20, bottom: 40 },
         head: [['NO', 'NAMA LENGKAP', 'JABATAN / INSTANSI', 'WAKTU', 'TANDA TANGAN']],
-        body: tableRows.map((p, i) => [
+        body: tableRowsForPDF.map((p, i) => [
           i + 1,
           p.isPlaceholder ? "" : (p.participant_name?.toUpperCase() || ""),
           p.isPlaceholder ? "" : (p.division?.toUpperCase() || "-"),
@@ -91,12 +75,33 @@ export default function RekapAbsensiPage() {
           3: { cellWidth: 20, halign: 'center' },
           4: { cellWidth: 35, minCellHeight: 14 }
         },
+        // LOGIKA KHUSUS HALAMAN 1
+        didDrawPage: (data) => {
+          if (data.pageNumber === 1) {
+            // 1. KOP SURAT
+            doc.setFont("times", "bold");
+            doc.setFontSize(14);
+            doc.text("DAFTAR HADIR PERTEMUAN", 105, 20, { align: "center" });
+            doc.setFontSize(12);
+            doc.text(eventInfo?.title?.toUpperCase() || "JUDUL KEGIATAN", 105, 27, { align: "center" });
+
+            doc.setLineWidth(0.5);
+            doc.line(20, 32, 190, 32);
+            doc.setLineWidth(0.1);
+            doc.line(20, 33, 190, 33);
+
+            // 2. DETAIL KEGIATAN
+            doc.setFont("times", "normal");
+            doc.setFontSize(11);
+            doc.text(`Hari / Tanggal  : ${eventInfo?.dateRaw || "-"}`, 20, 42);
+            doc.text(`Waktu               : ${eventInfo?.time || "-"} WIB s/d Selesai`, 20, 48);
+            doc.text(`Tempat             : ${eventInfo?.location || "-"}`, 20, 54);
+          }
+        },
         didDrawCell: (data) => {
           if (data.section === 'body' && data.column.index === 4) {
             const rowIndex = data.row.index;
-            const p = tableRows[rowIndex];
-            
-            // Perbaikan Error: Cek apakah data p ada sebelum akses properti
+            const p = tableRowsForPDF[rowIndex];
             if (p) {
               if (!p.isPlaceholder && p.signature) {
                 try {
@@ -105,14 +110,12 @@ export default function RekapAbsensiPage() {
                   const xPos = data.cell.x + (data.cell.width - imgW) / 2;
                   const yPos = data.cell.y + (data.cell.height - imgH) / 2;
                   doc.addImage(p.signature, 'PNG', xPos, yPos, imgW, imgH);
-                } catch (e) {
-                  console.error("Gagal render ttd");
-                }
+                } catch (e) { console.error(e); }
               }
-              // Nomor urut kecil di pojok tanda tangan
               doc.setFontSize(7);
               doc.setTextColor(150);
               doc.text(`${rowIndex + 1}.`, data.cell.x + 1.2, data.cell.y + 3.5);
+              doc.setTextColor(0);
             }
           }
         }
@@ -130,8 +133,6 @@ export default function RekapAbsensiPage() {
 
       doc.setFont("times", "normal");
       doc.setFontSize(11);
-      doc.setTextColor(0);
-
       doc.text("Mengetahui,", 50, currentY, { align: "center" });
       doc.text("Pimpinan Rapat,", 50, currentY + 6, { align: "center" });
       doc.text("(..................................................)", 50, currentY + 35, { align: "center" });
@@ -143,7 +144,7 @@ export default function RekapAbsensiPage() {
       doc.save(`REKAP_HADIR_${eventInfo?.title?.replace(/\s+/g, '_')}.pdf`);
     } catch (err) {
       console.error(err);
-      alert("Gagal memproses PDF. Periksa konsol untuk detail.");
+      alert("Gagal memproses PDF.");
     }
   };
 
