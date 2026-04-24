@@ -51,6 +51,7 @@ export default function RekapAbsensiPage() {
         // Tentukan posisi awal (hanya berlaku di halaman 1)
         startY: 62, 
         margin: { top: 20, left: 20, right: 20, bottom: 40 },
+        showHead: 'firstPage',
         head: [['NO', 'NAMA LENGKAP', 'JABATAN / INSTANSI', 'WAKTU', 'TANDA TANGAN']],
         body: tableRowsForPDF.map((p, i) => [
           i + 1,
