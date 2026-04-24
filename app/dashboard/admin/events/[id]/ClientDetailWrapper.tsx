@@ -11,7 +11,6 @@ import {
   UserCheck,
   Check,
   UserRoundCheck,
-  UserMinus,
   X,
   Printer,
   Info
@@ -41,18 +40,6 @@ interface ClientDetailWrapperProps {
   eventData: EventData;
 }
 
-interface InfoItemProps {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  color?: string;
-}
-
-interface ParticipantRowProps {
-  participant: Participant;
-  isPresent: boolean;
-}
-
 export default function ClientDetailWrapper({ eventData }: ClientDetailWrapperProps) {
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [copied, setCopied] = useState<boolean>(false);
@@ -65,15 +52,18 @@ export default function ClientDetailWrapper({ eventData }: ClientDetailWrapperPr
     setMounted(true);
   }, []);
 
- const displayUrl = useMemo(() => {
-  if (typeof window === "undefined") return "";
-  const baseUrl = window.location.origin;
-  
-  
-  const targetPath = `/scan/${eventData.id}`;
-  
-  return `${baseUrl}${targetPath}`;
-}, [eventData.id]);
+  // URL Khusus untuk QR (Scan di lokasi) -> Mengarah ke /scan
+  const qrUrl = useMemo(() => {
+    if (typeof window === "undefined") return "";
+    return `${window.location.origin}/scan/${eventData.id}`;
+  }, [eventData.id]);
+
+  // URL Khusus untuk Registrasi (Untuk disalin/share) -> Mengarah ke /register atau /events
+  const registrationUrl = useMemo(() => {
+    if (typeof window === "undefined") return "";
+    const targetPath = isNoReg ? `/events/${eventData.id}` : `/register/${eventData.id}`;
+    return `${window.location.origin}${targetPath}`;
+  }, [eventData.id, isNoReg]);
 
   useEffect(() => {
     const fetchParticipants = async () => {
@@ -98,7 +88,7 @@ export default function ClientDetailWrapper({ eventData }: ClientDetailWrapperPr
 
   const handleCopyLink = async () => {
     try {
-      await navigator.clipboard.writeText(displayUrl);
+      await navigator.clipboard.writeText(registrationUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) { console.error(err); }
@@ -136,7 +126,6 @@ export default function ClientDetailWrapper({ eventData }: ClientDetailWrapperPr
 
   return (
     <div className="space-y-6 md:space-y-8 relative">
-      {/* Tombol Action: Menggunakan flexbox agar rapi di semua ukuran layar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 mb-2 md:absolute md:-top-16 md:right-0">
         <button 
           onClick={() => window.open(`/rekap/${eventData.id}`, '_blank')}
@@ -157,14 +146,9 @@ export default function ClientDetailWrapper({ eventData }: ClientDetailWrapperPr
         )}
       </div>
 
-      {/* Grid Info: 2 kolom di HP, 3 di tablet, 5 di desktop */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
         <InfoItem icon={<CalendarDays size={18} />} label="Tanggal" value={formatIndoDate(eventData.dateRaw)} />
-        <InfoItem 
-          icon={<Clock size={18} />} 
-          label="Waktu" 
-          value={`${eventData.time} - ${eventData.endTime || "Selesai"}`} 
-        />
+        <InfoItem icon={<Clock size={18} />} label="Waktu" value={`${eventData.time} - ${eventData.endTime || "Selesai"}`} />
         <InfoItem icon={<MapPin size={18} />} label="Lokasi" value={eventData.location} />
         <InfoItem icon={<UserRoundCheck size={18} />} label="Hadir" value={`${presentOnly.length}`} color="text-emerald-400" />
         <InfoItem icon={<Users size={18} />} label="Total" value={`${participants.length}`} color="text-blue-400" />
@@ -174,11 +158,11 @@ export default function ClientDetailWrapper({ eventData }: ClientDetailWrapperPr
         <div className="lg:col-span-1">
           <div className="bg-slate-800 border border-slate-700 rounded-[1.3rem] p-6 md:p-8 flex flex-col items-center shadow-sm h-fit lg:sticky lg:top-6">
             <h3 className="text-[10px] font-black mb-6 text-slate-500 uppercase tracking-widest text-center">
-              {isNoReg ? "QR Presensi Langsung" : "QR Registrasi Peserta"}
+              QR Presensi (Scan di Lokasi)
             </h3>
             <div className="p-4 bg-white rounded-[1.5rem] md:rounded-[2rem] shadow-2xl min-h-[200px] w-full max-w-[240px] flex items-center justify-center overflow-hidden">
               {mounted ? (
-                <QRCodeSVG id="qr-code-svg" value={displayUrl} size={200} level="H" className="w-full h-auto" />
+                <QRCodeSVG id="qr-code-svg" value={qrUrl} size={200} level="H" includeMargin={true} className="w-full h-auto" />
               ) : (
                 <div className="w-[180px] h-[180px] bg-slate-100 animate-pulse rounded-xl" />
               )}
@@ -197,7 +181,7 @@ export default function ClientDetailWrapper({ eventData }: ClientDetailWrapperPr
           <div className="bg-slate-800 border-2 border-emerald-500/30 rounded-[1.1rem] overflow-hidden shadow-lg">
             <div className="bg-emerald-500/10 p-4 md:p-5 border-b border-emerald-500/20 flex justify-between items-center">
               <h3 className="font-bold flex items-center gap-2 text-[10px] md:text-xs text-emerald-400 uppercase tracking-widest">
-                <UserCheck size={18} /> {isNoReg ? "Daftar Peserta Hadir" : "Sudah Verifikasi"}
+                <UserCheck size={18} /> {isNoReg ? "Daftar Peserta Hadir" : "Sudah Absen Hadir"}
               </h3>
               <button onClick={() => setActiveModal("hadir")} className="text-[10px] font-black text-blue-400 uppercase hover:underline">Lihat Semua</button>
             </div>
@@ -205,17 +189,30 @@ export default function ClientDetailWrapper({ eventData }: ClientDetailWrapperPr
               {presentOnly.length === 0 ? <EmptyState text="Belum ada aktivitas" /> : presentOnly.slice(0, 5).map((p, i) => <ParticipantRow key={i} participant={p} isPresent={true} />)}
             </div>
           </div>
+
+          {!isNoReg && (
+            <div className="bg-slate-800 border border-slate-700 rounded-[1.1rem] overflow-hidden shadow-lg">
+              <div className="bg-slate-700/30 p-4 md:p-5 border-b border-slate-700 flex justify-between items-center">
+                <h3 className="font-bold flex items-center gap-2 text-[10px] md:text-xs text-slate-400 uppercase tracking-widest">
+                  <Users size={18} /> Sudah Registrasi (Belum Hadir)
+                </h3>
+                <button onClick={() => setActiveModal("belum")} className="text-[10px] font-black text-blue-400 uppercase hover:underline">Lihat Semua</button>
+              </div>
+              <div className="p-3 md:p-5 space-y-3">
+                {registeredOnly.length === 0 ? <EmptyState text="Semua pendaftar sudah hadir" /> : registeredOnly.slice(0, 5).map((p, i) => <ParticipantRow key={i} participant={p} isPresent={false} />)}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Modal: Dioptimalkan agar tidak kepotong di layar kecil */}
       {activeModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-md" onClick={() => setActiveModal(null)} />
           <div className="relative bg-slate-900 border border-slate-700 w-full max-w-lg rounded-[1.5rem] md:rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
             <div className="p-5 md:p-6 border-b border-slate-800 flex justify-between items-center bg-slate-900 sticky top-0 z-10">
               <h2 className="text-lg md:text-xl font-bold flex items-center gap-2 text-white">
-                {activeModal === "hadir" ? "Detail Peserta Hadir" : "Daftar Tunggu"}
+                {activeModal === "hadir" ? "Detail Peserta Hadir" : "Sudah Registrasi"}
               </h2>
               <button onClick={() => setActiveModal(null)} className="p-2 bg-slate-800 rounded-full text-slate-400 hover:text-white"><X size={20} /></button>
             </div>
@@ -229,7 +226,7 @@ export default function ClientDetailWrapper({ eventData }: ClientDetailWrapperPr
   );
 }
 
-function InfoItem({ icon, label, value, color = "text-blue-400" }: InfoItemProps) {
+function InfoItem({ icon, label, value, color = "text-blue-400" }: { icon: React.ReactNode, label: string, value: string, color?: string }) {
   return (
     <div className="bg-slate-800 border border-slate-700 rounded-2xl p-3 md:p-4 flex items-center gap-3 md:gap-4 shadow-sm hover:border-slate-600 transition-colors min-w-0">
       <div className={`${color} bg-current/10 p-2 md:p-2.5 rounded-xl shrink-0`}>{icon}</div>
@@ -241,7 +238,7 @@ function InfoItem({ icon, label, value, color = "text-blue-400" }: InfoItemProps
   );
 }
 
-function ParticipantRow({ participant, isPresent }: ParticipantRowProps) {
+function ParticipantRow({ participant, isPresent }: { participant: Participant, isPresent: boolean }) {
   return (
     <div className={`flex justify-between items-center p-3 md:p-4 rounded-xl md:rounded-2xl border ${isPresent ? "bg-emerald-500/5 border-emerald-500/10" : "bg-slate-900/60 border-slate-800"}`}>
       <div className="flex items-center gap-3 md:gap-4 min-w-0">

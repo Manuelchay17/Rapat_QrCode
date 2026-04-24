@@ -41,7 +41,7 @@ export default function DashboardLayout({
 
       <div className="flex-1 flex flex-col min-w-0">
         {/* TOPBAR: Kita modifikasi sedikit untuk menerima tombol menu */}
-        <header className="flex items-center px-4 md:px-6 h-16 border-b border-slate-800 bg-slate-900/50 backdrop-blur-md sticky top-0 z-50">
+        <header className="flex items-center px-4 md:px-6 h-16  border-slate-800 bg-slate-900/50 backdrop-blur-md sticky top-0 z-50">
           <button 
             onClick={() => setIsSidebarOpen(true)}
             className="p-2 mr-4 bg-slate-800 rounded-lg lg:hidden"
