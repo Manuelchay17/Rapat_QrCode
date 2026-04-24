@@ -65,12 +65,15 @@ export default function ClientDetailWrapper({ eventData }: ClientDetailWrapperPr
     setMounted(true);
   }, []);
 
-  const displayUrl = useMemo(() => {
-    if (typeof window === "undefined") return "";
-    const baseUrl = window.location.origin;
-    const targetPath = isNoReg ? `/scan/${eventData.id}` : `/register/${eventData.id}`;
-    return `${baseUrl}${targetPath}`;
-  }, [eventData.id, isNoReg]);
+ const displayUrl = useMemo(() => {
+  if (typeof window === "undefined") return "";
+  const baseUrl = window.location.origin;
+  
+  
+  const targetPath = `/scan/${eventData.id}`;
+  
+  return `${baseUrl}${targetPath}`;
+}, [eventData.id]);
 
   useEffect(() => {
     const fetchParticipants = async () => {
