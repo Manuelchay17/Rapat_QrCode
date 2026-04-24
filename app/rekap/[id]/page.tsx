@@ -57,7 +57,7 @@ export default function RekapAbsensiPage() {
       doc.text(`Waktu               : ${eventInfo?.time || "-"} WIB s/d Selesai`, 20, 48);
       doc.text(`Tempat             : ${eventInfo?.location || "-"}`, 20, 54);
 
-      // 3. LOGIKA BARIS (Diubah ke 12 Baris)
+      // 3. LOGIKA BARIS (MINIMAL 12 BARIS)
       const tableRows = [...peserta];
       while (tableRows.length < 12) {
         tableRows.push({ isPlaceholder: true });
@@ -66,9 +66,9 @@ export default function RekapAbsensiPage() {
       // 4. GENERATE TABEL
       autoTable(doc, {
         startY: 62,
-        margin: { left: 20, right: 20 },
+        margin: { left: 20, right: 20, bottom: 40 },
         head: [['NO', 'NAMA LENGKAP', 'JABATAN / INSTANSI', 'WAKTU', 'TANDA TANGAN']],
-        body: tableRows.slice(0, 12).map((p, i) => [
+        body: tableRows.map((p, i) => [
           i + 1,
           p.isPlaceholder ? "" : (p.participant_name?.toUpperCase() || ""),
           p.isPlaceholder ? "" : (p.division?.toUpperCase() || "-"),
@@ -89,39 +89,43 @@ export default function RekapAbsensiPage() {
           1: { cellWidth: 55 },
           2: { cellWidth: 50 },
           3: { cellWidth: 20, halign: 'center' },
-          4: { cellWidth: 35, minCellHeight: 13 } // Sedikit dikurangi dari 14 ke 13 agar aman
+          4: { cellWidth: 35, minCellHeight: 14 }
         },
         didDrawCell: (data) => {
           if (data.section === 'body' && data.column.index === 4) {
             const rowIndex = data.row.index;
             const p = tableRows[rowIndex];
             
-            if (p && !p.isPlaceholder && p.signature) {
-              try {
-                const imgW = 16;
-                const imgH = 6;
-                const xPos = data.cell.x + (data.cell.width - imgW) / 2;
-                const yPos = data.cell.y + (data.cell.height - imgH) / 2;
-                doc.addImage(p.signature, 'PNG', xPos, yPos, imgW, imgH);
-              } catch (e) {
-                console.error("Gagal render gambar ttd");
+            // Perbaikan Error: Cek apakah data p ada sebelum akses properti
+            if (p) {
+              if (!p.isPlaceholder && p.signature) {
+                try {
+                  const imgW = 16;
+                  const imgH = 6;
+                  const xPos = data.cell.x + (data.cell.width - imgW) / 2;
+                  const yPos = data.cell.y + (data.cell.height - imgH) / 2;
+                  doc.addImage(p.signature, 'PNG', xPos, yPos, imgW, imgH);
+                } catch (e) {
+                  console.error("Gagal render ttd");
+                }
               }
+              // Nomor urut kecil di pojok tanda tangan
+              doc.setFontSize(7);
+              doc.setTextColor(150);
+              doc.text(`${rowIndex + 1}.`, data.cell.x + 1.2, data.cell.y + 3.5);
             }
-            doc.setFontSize(7);
-            doc.setTextColor(150);
-            doc.text(`${rowIndex + 1}.`, data.cell.x + 1.2, data.cell.y + 3.5);
           }
         }
       });
 
       // 5. FOOTER PENGESAHAN
-      const finalY = (doc as any).lastAutoTable.finalY + 12; // Jarak dikurangi sedikit
+      const finalY = (doc as any).lastAutoTable.finalY + 15;
       const pageHeight = doc.internal.pageSize.getHeight();
       
       let currentY = finalY;
-      if (finalY > pageHeight - 40) {
+      if (finalY > pageHeight - 50) {
         doc.addPage();
-        currentY = 20;
+        currentY = 25;
       }
 
       doc.setFont("times", "normal");
@@ -130,20 +134,20 @@ export default function RekapAbsensiPage() {
 
       doc.text("Mengetahui,", 50, currentY, { align: "center" });
       doc.text("Pimpinan Rapat,", 50, currentY + 6, { align: "center" });
-      doc.text("(..................................................)", 50, currentY + 30, { align: "center" });
+      doc.text("(..................................................)", 50, currentY + 35, { align: "center" });
 
       doc.text("Dicatat Oleh,", 155, currentY, { align: "center" });
       doc.text("Sekretaris,", 155, currentY + 6, { align: "center" });
-      doc.text("(..................................................)", 155, currentY + 30, { align: "center" });
+      doc.text("(..................................................)", 155, currentY + 35, { align: "center" });
 
       doc.save(`REKAP_HADIR_${eventInfo?.title?.replace(/\s+/g, '_')}.pdf`);
     } catch (err) {
       console.error(err);
-      alert("Gagal download.");
+      alert("Gagal memproses PDF. Periksa konsol untuk detail.");
     }
   };
 
-  if (loading) return <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white font-bold tracking-widest uppercase italic">Loading...</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center font-bold">Loading...</div>;
 
   return (
     <div className="min-h-screen bg-slate-100 p-4 md:p-10 print:bg-white print:p-0">
@@ -152,10 +156,10 @@ export default function RekapAbsensiPage() {
           <ChevronLeft size={20} /> Kembali
         </button>
         <div className="flex gap-3">
-          <button onClick={handleDownloadPDF} className="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold flex items-center gap-2">
+          <button onClick={handleDownloadPDF} className="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold flex items-center gap-2 shadow-md">
             <Download size={18} /> Simpan PDF
           </button>
-          <button onClick={() => window.print()} className="bg-white border border-slate-300 px-6 py-2 rounded-lg font-bold flex items-center gap-2">
+          <button onClick={() => window.print()} className="bg-white border border-slate-300 px-6 py-2 rounded-lg font-bold flex items-center gap-2 shadow-sm">
             <Printer size={18} /> Cetak
           </button>
         </div>
@@ -185,9 +189,10 @@ export default function RekapAbsensiPage() {
           </thead>
           <tbody>
             {(() => {
-              const rows = [...peserta].slice(0, 12);
-              while(rows.length < 12) rows.push({ isPlaceholder: true });
-              return rows.map((p, i) => (
+              const displayRows = [...peserta];
+              while(displayRows.length < 12) displayRows.push({ isPlaceholder: true });
+              
+              return displayRows.map((p, i) => (
                 <tr key={i} className="h-14">
                   <td className="border-[0.2px] border-black text-center">{i + 1}</td>
                   <td className="border-[0.2px] border-black px-3 font-bold uppercase">{p.isPlaceholder ? "" : p.participant_name}</td>
