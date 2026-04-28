@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { Printer, ChevronLeft, Download } from "lucide-react";
+import { Printer, ChevronLeft, Download, UserCheck } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -11,6 +11,9 @@ export default function RekapAbsensiPage() {
   const [peserta, setPeserta] = useState<any[]>([]);
   const [eventInfo, setEventInfo] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+
+  const [pimpinanName, setPimpinanName] = useState("");
+  const [sekretarisName, setSekretarisName] = useState("");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -36,9 +39,12 @@ export default function RekapAbsensiPage() {
         orientation: "p",
         unit: "mm",
         format: "a4",
+        compress: true,
       });
 
-      // Konfigurasi Tabel
+      const dataPimpinan = peserta.find(p => p.participant_name === pimpinanName);
+      const dataSekretaris = peserta.find(p => p.participant_name === sekretarisName);
+
       const tableRowsForPDF = [...peserta];
       if (tableRowsForPDF.length < 12) {
         const diff = 12 - tableRowsForPDF.length;
@@ -48,8 +54,7 @@ export default function RekapAbsensiPage() {
       }
 
       autoTable(doc, {
-        // Tentukan posisi awal (hanya berlaku di halaman 1)
-        startY: 62, 
+        startY: 62,
         margin: { top: 20, left: 20, right: 20, bottom: 40 },
         showHead: 'firstPage',
         head: [['NO', 'NAMA LENGKAP', 'JABATAN / INSTANSI', 'WAKTU', 'TANDA TANGAN']],
@@ -58,16 +63,16 @@ export default function RekapAbsensiPage() {
           p.isPlaceholder ? "" : (p.participant_name?.toUpperCase() || ""),
           p.isPlaceholder ? "" : (p.division?.toUpperCase() || "-"),
           p.isPlaceholder ? "" : (p.time || "-"),
-          "" 
+          ""
         ]),
         theme: 'grid',
-        headStyles: { 
-          fillColor: [255, 255, 255], textColor: [0, 0, 0], font: 'times', fontStyle: 'bold', 
-          halign: 'center', lineWidth: 0.1, lineColor: [0, 0, 0] 
+        headStyles: {
+          fillColor: [255, 255, 255], textColor: [0, 0, 0], font: 'times', fontStyle: 'bold',
+          halign: 'center', lineWidth: 0.1, lineColor: [0, 0, 0]
         },
-        styles: { 
-          font: 'times', lineWidth: 0.1, lineColor: [0, 0, 0], textColor: [0, 0, 0], 
-          fontSize: 10, cellPadding: 2.5 
+        styles: {
+          font: 'times', lineWidth: 0.1, lineColor: [0, 0, 0], textColor: [0, 0, 0],
+          fontSize: 10, cellPadding: 2.5
         },
         columnStyles: {
           0: { cellWidth: 10, halign: 'center' },
@@ -76,22 +81,17 @@ export default function RekapAbsensiPage() {
           3: { cellWidth: 20, halign: 'center' },
           4: { cellWidth: 35, minCellHeight: 14 }
         },
-        // LOGIKA KHUSUS HALAMAN 1
         didDrawPage: (data) => {
           if (data.pageNumber === 1) {
-            // 1. KOP SURAT
             doc.setFont("times", "bold");
             doc.setFontSize(14);
             doc.text("DAFTAR HADIR PERTEMUAN", 105, 20, { align: "center" });
             doc.setFontSize(12);
             doc.text(eventInfo?.title?.toUpperCase() || "JUDUL KEGIATAN", 105, 27, { align: "center" });
-
             doc.setLineWidth(0.5);
             doc.line(20, 32, 190, 32);
             doc.setLineWidth(0.1);
             doc.line(20, 33, 190, 33);
-
-            // 2. DETAIL KEGIATAN
             doc.setFont("times", "normal");
             doc.setFontSize(11);
             doc.text(`Hari / Tanggal  : ${eventInfo?.dateRaw || "-"}`, 20, 42);
@@ -103,44 +103,60 @@ export default function RekapAbsensiPage() {
           if (data.section === 'body' && data.column.index === 4) {
             const rowIndex = data.row.index;
             const p = tableRowsForPDF[rowIndex];
-            if (p) {
-              if (!p.isPlaceholder && p.signature) {
-                try {
-                  const imgW = 16;
-                  const imgH = 6;
-                  const xPos = data.cell.x + (data.cell.width - imgW) / 2;
-                  const yPos = data.cell.y + (data.cell.height - imgH) / 2;
-                  doc.addImage(p.signature, 'PNG', xPos, yPos, imgW, imgH);
-                } catch (e) { console.error(e); }
-              }
-              doc.setFontSize(7);
-              doc.setTextColor(150);
-              doc.text(`${rowIndex + 1}.`, data.cell.x + 1.2, data.cell.y + 3.5);
-              doc.setTextColor(0);
+            if (p && !p.isPlaceholder && p.signature) {
+              try {
+                const imgW = 16;
+                const imgH = 8;
+                const xPos = data.cell.x + (data.cell.width - imgW) / 2;
+                const yPos = data.cell.y + (data.cell.height - imgH) / 2;
+                doc.addImage(p.signature, 'PNG', xPos, yPos, imgW, imgH, undefined, 'FAST');
+              } catch (e) { console.error(e); }
             }
           }
         }
       });
 
-      // 5. FOOTER PENGESAHAN
       const finalY = (doc as any).lastAutoTable.finalY + 15;
       const pageHeight = doc.internal.pageSize.getHeight();
-      
       let currentY = finalY;
-      if (finalY > pageHeight - 50) {
+      if (finalY > pageHeight - 60) {
         doc.addPage();
         currentY = 25;
       }
 
-      doc.setFont("times", "normal");
-      doc.setFontSize(11);
-      doc.text("Mengetahui,", 50, currentY, { align: "center" });
-      doc.text("Pimpinan Rapat,", 50, currentY + 6, { align: "center" });
-      doc.text("(..................................................)", 50, currentY + 35, { align: "center" });
+      // --- PENYESUAIAN UKURAN & JARAK ---
+      const sigW = 22;      // Digedein dikit (sebelumnya 18)
+      const sigH = 11;      // Digedein dikit (sebelumnya 9)
+      const sigOffset = 6;  // Jarak TTD dari teks jabatan
+      const nameOffset = 22; // Dirapatkan (sebelumnya 30) agar nama lebih dekat ke TTD
 
+      doc.setFont("times", "normal");
+      doc.setFontSize(10);
+
+      // PIMPINAN
+      doc.text("Mengetahui,", 50, currentY, { align: "center" });
+      doc.text("Pimpinan Rapat,", 50, currentY + 5, { align: "center" });
+      if (dataPimpinan?.signature) {
+        try {
+          doc.addImage(dataPimpinan.signature, 'PNG', 50 - (sigW/2), currentY + sigOffset, sigW, sigH, undefined, 'FAST');
+        } catch (e) { console.error(e); }
+      }
+      doc.setFont("times", "bold");
+      const txtPimpinan = pimpinanName ? `( ${pimpinanName.toUpperCase()} )` : "( .................................................. )";
+      doc.text(txtPimpinan, 50, currentY + nameOffset, { align: "center" });
+
+      // SEKRETARIS
+      doc.setFont("times", "normal");
       doc.text("Dicatat Oleh,", 155, currentY, { align: "center" });
-      doc.text("Sekretaris,", 155, currentY + 6, { align: "center" });
-      doc.text("(..................................................)", 155, currentY + 35, { align: "center" });
+      doc.text("Sekretaris,", 155, currentY + 5, { align: "center" });
+      if (dataSekretaris?.signature) {
+        try {
+          doc.addImage(dataSekretaris.signature, 'PNG', 155 - (sigW/2), currentY + sigOffset, sigW, sigH, undefined, 'FAST');
+        } catch (e) { console.error(e); }
+      }
+      doc.setFont("times", "bold");
+      const txtSekretaris = sekretarisName ? `( ${sekretarisName.toUpperCase()} )` : "( .................................................. )";
+      doc.text(txtSekretaris, 155, currentY + nameOffset, { align: "center" });
 
       doc.save(`REKAP_HADIR_${eventInfo?.title?.replace(/\s+/g, '_')}.pdf`);
     } catch (err) {
@@ -149,34 +165,57 @@ export default function RekapAbsensiPage() {
     }
   };
 
+  const selectedPimpinan = peserta.find(p => p.participant_name === pimpinanName);
+  const selectedSekretaris = peserta.find(p => p.participant_name === sekretarisName);
+
   if (loading) return <div className="min-h-screen flex items-center justify-center font-bold">Loading...</div>;
 
   return (
     <div className="min-h-screen bg-slate-100 p-4 md:p-10 print:bg-white print:p-0">
-      <div className="max-w-[210mm] mx-auto mb-6 flex justify-between items-center print:hidden">
-        <button onClick={() => window.history.back()} className="text-slate-600 flex items-center gap-2 font-bold hover:text-blue-600">
-          <ChevronLeft size={20} /> Kembali
-        </button>
-        <div className="flex gap-3">
-          <button onClick={handleDownloadPDF} className="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold flex items-center gap-2 shadow-md">
-            <Download size={18} /> Simpan PDF
+      <div className="max-w-[210mm] mx-auto mb-6 space-y-4 print:hidden">
+        <div className="flex justify-between items-center">
+          <button onClick={() => window.history.back()} className="text-slate-600 flex items-center gap-2 font-bold hover:text-blue-600">
+            <ChevronLeft size={20} /> Kembali
           </button>
-          <button onClick={() => window.print()} className="bg-white border border-slate-300 px-6 py-2 rounded-lg font-bold flex items-center gap-2 shadow-sm">
-            <Printer size={18} /> Cetak
-          </button>
+          <div className="flex gap-3">
+            <button onClick={handleDownloadPDF} className="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold flex items-center gap-2 shadow-md">
+              <Download size={18} /> Simpan PDF
+            </button>
+            <button onClick={() => window.print()} className="bg-white border border-slate-300 px-6 py-2 rounded-lg font-bold flex items-center gap-2 shadow-sm">
+              <Printer size={18} /> Cetak
+            </button>
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-bold text-slate-500 uppercase">Pimpinan Rapat</label>
+            <select value={pimpinanName} onChange={(e) => setPimpinanName(e.target.value)} className="border border-slate-300 rounded-md p-2 text-sm text-black bg-white">
+              <option value="">-- Pilih Pimpinan --</option>
+              {peserta.map((p, idx) => (<option key={idx} value={p.participant_name} className="text-black">{p.participant_name}</option>))}
+            </select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-bold text-slate-500 uppercase">Sekretaris</label>
+            <select value={sekretarisName} onChange={(e) => setSekretarisName(e.target.value)} className="border border-slate-300 rounded-md p-2 text-sm text-black bg-white">
+              <option value="">-- Pilih Sekretaris --</option>
+              {peserta.map((p, idx) => (<option key={idx} value={p.participant_name} className="text-black">{p.participant_name}</option>))}
+            </select>
+          </div>
         </div>
       </div>
 
-      <div className="max-w-[210mm] mx-auto bg-white p-[1.5cm] md:p-[2cm] shadow-2xl min-h-[297mm] text-black font-serif border border-slate-200">
+      {/* Preview Kertas */}
+      <div className="max-w-[210mm] mx-auto bg-white p-[2cm] shadow-2xl min-h-[297mm] text-black font-serif border border-slate-200">
         <div className="text-center border-b-[3px] border-double border-black pb-4 mb-8">
-          <h1 className="text-xl font-bold uppercase tracking-tight">Daftar Hadir Pertemuan</h1>
+          <h1 className="text-xl font-bold uppercase">Daftar Hadir Pertemuan</h1>
           <h2 className="text-lg font-bold uppercase">{eventInfo?.title}</h2>
         </div>
 
         <div className="mb-8 space-y-1 text-[13px]">
           <p>Hari / Tanggal : {eventInfo?.dateRaw}</p>
           <p>Waktu                : {eventInfo?.time} WIB s/d Selesai</p>
-          <p>Tempat              : {eventInfo?.location}</p>
+          <p>Tempat               : {eventInfo?.location}</p>
         </div>
 
         <table className="w-full border-collapse border-[0.2px] border-black text-sm">
@@ -193,7 +232,6 @@ export default function RekapAbsensiPage() {
             {(() => {
               const displayRows = [...peserta];
               while(displayRows.length < 12) displayRows.push({ isPlaceholder: true });
-              
               return displayRows.map((p, i) => (
                 <tr key={i} className="h-14">
                   <td className="border-[0.2px] border-black text-center">{i + 1}</td>
@@ -212,14 +250,29 @@ export default function RekapAbsensiPage() {
           </tbody>
         </table>
 
+        {/* FOOTER PREVIEW - Konsisten dengan gambar */}
         <div className="mt-16 grid grid-cols-2 text-center text-[13px]">
-          <div className="space-y-24">
+          <div className="flex flex-col items-center">
             <p className="font-bold">Mengetahui,<br/>Pimpinan Rapat</p>
-            <p>(..................................................)</p>
+            <div className="h-14 flex items-center justify-center"> {/* Container dirapatkan */}
+               {selectedPimpinan?.signature && (
+                 <img src={selectedPimpinan.signature} className="h-12 object-contain mix-blend-multiply" alt="" />
+               )}
+            </div>
+            <p className="font-bold uppercase tracking-wide">
+              {pimpinanName ? `( ${pimpinanName} )` : "( .................................................. )"}
+            </p>
           </div>
-          <div className="space-y-24">
+          <div className="flex flex-col items-center">
             <p className="font-bold">Dicatat Oleh,<br/>Sekretaris</p>
-            <p>(..................................................)</p>
+            <div className="h-14 flex items-center justify-center"> {/* Container dirapatkan */}
+               {selectedSekretaris?.signature && (
+                 <img src={selectedSekretaris.signature} className="h-12 object-contain mix-blend-multiply" alt="" />
+               )}
+            </div>
+            <p className="font-bold uppercase tracking-wide">
+              {sekretarisName ? `( ${sekretarisName} )` : "( .................................................. )"}
+            </p>
           </div>
         </div>
       </div>

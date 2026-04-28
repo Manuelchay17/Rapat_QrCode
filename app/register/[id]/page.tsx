@@ -45,7 +45,7 @@ export default function RegistrationPage() {
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-center text-white font-sans">
         <CheckCircle size={80} className="text-emerald-500 mb-4" />
         <h1 className="text-2xl font-bold">Registrasi Berhasil!</h1>
-        <p className="text-slate-400 mt-2">Terima kasih {formData.name}, nama Anda sudah masuk daftar antrean absensi.</p>
+        <p className="text-slate-400 mt-2">Terima kasih {formData.name}, nama Anda sudah masuk daftar peserta.</p>
         <button onClick={() => window.location.reload()} className="mt-8 text-blue-500 text-sm underline">Daftar Orang Lain</button>
       </div>
     );
@@ -75,7 +75,7 @@ export default function RegistrationPage() {
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Jabatan / Divisi</label>
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Jabatan</label>
             <div className="relative">
               <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
               <input 
@@ -89,7 +89,7 @@ export default function RegistrationPage() {
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Instansi / UPD</label>
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Instansi / OPD</label>
             <div className="relative">
               <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
               <input 

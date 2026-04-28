@@ -13,10 +13,13 @@ export async function GET(
       where: { id: eventId },
       select: { 
         id: true,
+        title: true,
         rapat_type: true, 
         description: true,
         location: true,
-        dateRaw: true,
+        dateRaw: true,     // Tanggal
+        time: true,      // Jam Mulai
+  endTime: true,   // Jam Selesai
       }
     });
 

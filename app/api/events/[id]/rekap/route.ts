@@ -1,3 +1,4 @@
+// app/api/events/[id]/rekap/route.ts
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
@@ -9,7 +10,6 @@ export async function GET(
     const resolvedParams = await params;
     const id = resolvedParams.id;
 
-    // 1. Ambil Info Event
     const event = await prisma.event.findUnique({
       where: { id: id },
     });
@@ -18,8 +18,6 @@ export async function GET(
       return NextResponse.json({ message: "Event tidak ditemukan" }, { status: 404 });
     }
 
-    // 2. Ambil Daftar Absensi
-    // HAPUS bagian 'include' jika memang field 'peserta' tidak ada di schema
     const absensi = await prisma.absensi.findMany({
       where: { 
         rapat_id: id,
@@ -30,27 +28,42 @@ export async function GET(
       },
     });
 
-    // 3. Mapping data
-    // 3. Mapping data
-const formattedPeserta = absensi.map((p: any) => ({
-  participant_name: p.participant_name,
-  division: p.division || "-",
-  
-  // Karena p.check_in_time isinya sudah string "09.33", 
-  // langsung ambil saja tanpa menggunakan new Date()
-  time: p.check_in_time || "-",
-  
-  signature: p.signature_at_event || null,
-}));
+    const formattedPeserta = absensi.map((p: any) => {
+      let displayTime = "-";
 
-   return NextResponse.json({
-  event: {
-    ...event,
-    // Kita langsung pakai dateRaw karena properti 'date' tidak ada di schema
-    dateRaw: event.dateRaw || "-"
-  },
-  peserta: formattedPeserta,
-});
+      // LOGIKA KONVERSI JAM KE WIB
+      if (p.check_in_time) {
+        const dateObj = new Date(p.check_in_time);
+        
+        // Cek apakah dateObj valid
+        if (!isNaN(dateObj.getTime())) {
+          displayTime = dateObj.toLocaleTimeString("id-ID", {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+            timeZone: "Asia/Jakarta", // Mengunci ke Waktu Indonesia Barat
+          }).replace(":", ".");
+        } else {
+          // Jika data di DB sudah string manual "09.30"
+          displayTime = p.check_in_time;
+        }
+      }
+
+      return {
+        participant_name: p.participant_name,
+        division: p.division || "-",
+        time: displayTime,
+        signature: p.signature_at_event || null,
+      };
+    });
+
+    return NextResponse.json({
+      event: {
+        ...event,
+        dateRaw: event.dateRaw || "-"
+      },
+      peserta: formattedPeserta,
+    });
 
   } catch (error: any) {
     console.error("API Error:", error);

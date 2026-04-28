@@ -181,7 +181,7 @@ export default function ClientDetailWrapper({ eventData }: ClientDetailWrapperPr
           <div className="bg-slate-800 border-2 border-emerald-500/30 rounded-[1.1rem] overflow-hidden shadow-lg">
             <div className="bg-emerald-500/10 p-4 md:p-5 border-b border-emerald-500/20 flex justify-between items-center">
               <h3 className="font-bold flex items-center gap-2 text-[10px] md:text-xs text-emerald-400 uppercase tracking-widest">
-                <UserCheck size={18} /> {isNoReg ? "Daftar Peserta Hadir" : "Sudah Absen Hadir"}
+                <UserCheck size={18} /> {isNoReg ? "Daftar Peserta Hadir" : "Sudah Hadir"}
               </h3>
               <button onClick={() => setActiveModal("hadir")} className="text-[10px] font-black text-blue-400 uppercase hover:underline">Lihat Semua</button>
             </div>
