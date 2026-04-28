@@ -11,7 +11,6 @@ export async function POST(req: Request) {
     }
 
     const result = await prisma.$transaction(async (tx) => {
-      // 1. Langsung cek apakah nama ini sudah terdaftar di rapat ini
       const existingAttendance = await tx.absensi.findFirst({
         where: { 
           rapat_id: rapatId, 
@@ -19,14 +18,15 @@ export async function POST(req: Request) {
         },
       });
 
+      // --- PERBAIKAN ZONA WAKTU DI SINI ---
       const currentTime = new Date().toLocaleTimeString("id-ID", { 
+        timeZone: "Asia/Jakarta", // <--- Kuncinya ada di baris ini
         hour: '2-digit', 
         minute: '2-digit',
         hour12: false 
-      });
+      }).replace('.', ':'); // Mengubah format 01.27 menjadi 01:27
 
       if (existingAttendance) {
-        // 2. Jika sudah ada, update statusnya (misal dari registered jadi present)
         return await tx.absensi.update({
           where: { id: existingAttendance.id },
           data: {
@@ -37,7 +37,6 @@ export async function POST(req: Request) {
           },
         });
       } else {
-        // 3. Jika belum ada, buat data absensi baru
         const newEntry = await tx.absensi.create({
           data: {
             rapat_id: rapatId,
@@ -49,7 +48,6 @@ export async function POST(req: Request) {
           },
         });
 
-        // 4. Update counter peserta di tabel Event
         await tx.event.update({
           where: { id: rapatId },
           data: { participants: { increment: 1 } }
