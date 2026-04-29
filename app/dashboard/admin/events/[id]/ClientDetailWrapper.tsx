@@ -16,6 +16,8 @@ import {
   Info
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
+import { jsPDF } from "jspdf";
+import html2canvas from "html2canvas";
 
 interface EventData {
   id: string;
@@ -52,13 +54,11 @@ export default function ClientDetailWrapper({ eventData }: ClientDetailWrapperPr
     setMounted(true);
   }, []);
 
-  // URL Khusus untuk QR (Scan di lokasi) -> Mengarah ke /scan
   const qrUrl = useMemo(() => {
     if (typeof window === "undefined") return "";
     return `${window.location.origin}/scan/${eventData.id}`;
   }, [eventData.id]);
 
-  // URL Khusus untuk Registrasi (Untuk disalin/share) -> Mengarah ke /register atau /events
   const registrationUrl = useMemo(() => {
     if (typeof window === "undefined") return "";
     const targetPath = isNoReg ? `/events/${eventData.id}` : `/register/${eventData.id}`;
@@ -94,31 +94,42 @@ export default function ClientDetailWrapper({ eventData }: ClientDetailWrapperPr
     } catch (err) { console.error(err); }
   };
 
-  const downloadQRCode = () => {
-    const svg = document.getElementById("qr-code-svg");
-    if (!svg) return;
-    const svgData = new XMLSerializer().serializeToString(svg);
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
-    const img = new Image();
-    img.onload = () => {
-      canvas.width = img.width;
-      canvas.height = img.height;
-      ctx?.drawImage(img, 0, 0);
-      const pngFile = canvas.toDataURL("image/png");
-      const downloadLink = document.createElement("a");
-      downloadLink.download = `QR-${eventData.title}.png`;
-      downloadLink.href = pngFile;
-      downloadLink.click();
-    };
-    img.src = "data:image/svg+xml;base64," + btoa(svgData);
+  const downloadPosterPDF = async () => {
+    const element = document.getElementById("qr-poster-template");
+    if (!element) return;
+
+    element.style.display = "block";
+
+    try {
+      const canvas = await html2canvas(element, {
+        scale: 2, 
+        useCORS: true,
+        logging: false,
+        backgroundColor: "#ffffff" // Background putih untuk hemat tinta
+      });
+      
+      const imgData = canvas.toDataURL("image/jpeg", 0.6); 
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
+        compress: true 
+      });
+
+      pdf.addImage(imgData, "JPEG", 0, 0, 210, 297, undefined, 'FAST');
+      pdf.save(`Poster_QR_${eventData.title.replace(/\s+/g, '_')}.pdf`);
+    } catch (err) {
+      console.error("PDF Error:", err);
+    } finally {
+      element.style.display = "none";
+    }
   };
 
   const formatIndoDate = (dateStr: string) => {
     try {
       return new Date(dateStr).toLocaleDateString('id-ID', {
         day: 'numeric',
-        month: 'short',
+        month: 'long',
         year: 'numeric'
       });
     } catch { return dateStr; }
@@ -126,6 +137,7 @@ export default function ClientDetailWrapper({ eventData }: ClientDetailWrapperPr
 
   return (
     <div className="space-y-6 md:space-y-8 relative">
+      {/* Header Buttons */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 mb-2 md:absolute md:-top-16 md:right-0">
         <button 
           onClick={() => window.open(`/rekap/${eventData.id}`, '_blank')}
@@ -146,6 +158,7 @@ export default function ClientDetailWrapper({ eventData }: ClientDetailWrapperPr
         )}
       </div>
 
+      {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
         <InfoItem icon={<CalendarDays size={18} />} label="Tanggal" value={formatIndoDate(eventData.dateRaw)} />
         <InfoItem icon={<Clock size={18} />} label="Waktu" value={`${eventData.time} - ${eventData.endTime || "Selesai"}`} />
@@ -169,10 +182,10 @@ export default function ClientDetailWrapper({ eventData }: ClientDetailWrapperPr
             </div>
             <button 
               disabled={!mounted}
-              onClick={downloadQRCode}
-              className="mt-8 w-full sm:w-auto flex items-center justify-center gap-2 text-blue-400 hover:text-blue-300 text-xs font-bold transition group bg-blue-400/5 px-4 py-2.5 rounded-lg disabled:opacity-50"
+              onClick={downloadPosterPDF}
+              className="mt-8 w-full sm:w-auto flex items-center justify-center gap-2 text-blue-400 hover:text-blue-300 text-[10px] font-black tracking-widest transition group bg-blue-400/5 px-6 py-3 rounded-xl border border-blue-400/20 hover:bg-blue-400/10 disabled:opacity-50 uppercase"
             >
-              <Download size={16} /> DOWNLOAD QR
+              <Download size={16} /> Download PDF
             </button>
           </div>
         </div>
@@ -206,6 +219,109 @@ export default function ClientDetailWrapper({ eventData }: ClientDetailWrapperPr
         </div>
       </div>
 
+ 
+
+<div 
+  id="qr-poster-template" 
+  style={{ 
+    display: 'none', 
+    width: '210mm', 
+    height: '297mm', 
+    position: 'fixed', 
+    top: '-10000px', 
+    left: '-10000px',
+    backgroundColor: '#ffffff'
+  }} 
+>
+  <div 
+    style={{ 
+      height: '100%', 
+      width: '100%', 
+      padding: '12mm', // Padding luar sedikit diperkecil agar border terlihat formal
+      display: 'flex', 
+      flexDirection: 'column', 
+      fontFamily: 'sans-serif',
+      color: '#000000'
+    }}
+  >
+    {/* GARIS PINGGIR KEMBALI DIHADIRKAN & DIPERTEGAS */}
+    <div style={{ 
+      border: '2px solid #000000', // Border hitam pekat (Hitam Putih)
+      height: '100%', 
+      display: 'flex', 
+      flexDirection: 'column', 
+      alignItems: 'center',
+      padding: '20mm 15mm' // Jarak konten dari border dirapatkan
+    }}>
+      
+      {/* SECTION ATAS - INSTRUKSI DIREPET (RAPIH) */}
+      <div style={{ marginBottom: '15mm', textAlign: 'center', width: '100%' }}>
+        <h1 style={{ 
+          fontSize: '60px', // Ukuran diperbesar sedikit dari respon sebelumnya
+          fontWeight: '900', 
+          lineHeight: '1.1', 
+          margin: '0', 
+          letterSpacing: '-1.5px',
+          color: '#000000'
+        }}>
+          SILAKAN SCAN <br /> DI SINI
+        </h1>
+        <p style={{ 
+          fontSize: '20px', 
+          marginTop: '6mm', 
+          color: '#333333', // Abu tua (tetap grayscale)
+          maxWidth: '150mm', 
+          margin: '6mm auto 0 auto',
+          lineHeight: '1.5' 
+        }}>
+          Arahkan kamera smartphone Anda ke kode QR untuk mengisi daftar hadir rapat secara digital.
+        </p>
+      </div>
+
+      {/* SECTION TENGAH - AREA QR CODE (FOKUS UTAMA) */}
+      <div style={{ 
+        flex: '1', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        width: '100%' 
+      }}>
+        {/* Border halus di sekitar QR dipertegas */}
+        <div style={{ 
+          display: 'inline-block',
+          padding: '10mm', 
+          border: '2px solid #000000', 
+          borderRadius: '24px',
+          backgroundColor: '#ffffff'
+        }}>
+          {mounted && (
+            <QRCodeSVG 
+              id="qr-code-svg-poster" // Beri ID unik agar tidak konflik
+              value={qrUrl} 
+              size={480} // Ukuran diperbesar untuk mengisi ruang
+              level="H" 
+              fgColor="#000000" 
+              bgColor="#ffffff" 
+              includeMargin={false}
+            />
+          )}
+        </div>
+      </div>
+
+      {/* SECTION BAWAH (MINIMALIS Tanpa Judul Rapat) */}
+      <div style={{ marginTop: '15mm', width: '100%', textAlign: 'center' }}>
+        {/* Garis pemisah tipis tetap dipertahankan */}
+        <div style={{ width: '80mm', height: '1.5px', backgroundColor: '#000000', margin: '0 auto 15mm auto' }}></div>
+        
+    
+        
+      </div>
+
+    </div>
+  </div>
+</div>
+
+      {/* Modal Detail */}
       {activeModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-md" onClick={() => setActiveModal(null)} />
@@ -226,42 +342,43 @@ export default function ClientDetailWrapper({ eventData }: ClientDetailWrapperPr
   );
 }
 
+// ... (Sub-komponen InfoItem, ParticipantRow, EmptyState tetap sama seperti sebelumnya)
 function InfoItem({ icon, label, value, color = "text-blue-400" }: { icon: React.ReactNode, label: string, value: string, color?: string }) {
-  return (
-    <div className="bg-slate-800 border border-slate-700 rounded-2xl p-3 md:p-4 flex items-center gap-3 md:gap-4 shadow-sm hover:border-slate-600 transition-colors min-w-0">
-      <div className={`${color} bg-current/10 p-2 md:p-2.5 rounded-xl shrink-0`}>{icon}</div>
-      <div className="min-w-0">
-        <p className="text-[8px] md:text-[10px] text-slate-500 uppercase font-black tracking-widest truncate">{label}</p>
-        <p className="text-xs md:text-sm font-bold truncate text-slate-200">{value}</p>
-      </div>
-    </div>
-  );
-}
-
-function ParticipantRow({ participant, isPresent }: { participant: Participant, isPresent: boolean }) {
-  return (
-    <div className={`flex justify-between items-center p-3 md:p-4 rounded-xl md:rounded-2xl border ${isPresent ? "bg-emerald-500/5 border-emerald-500/10" : "bg-slate-900/60 border-slate-800"}`}>
-      <div className="flex items-center gap-3 md:gap-4 min-w-0">
-        <div className={`w-8 h-8 md:w-10 md:h-10 shrink-0 rounded-full flex items-center justify-center text-[10px] md:text-xs font-black ${isPresent ? "bg-emerald-600 text-white" : "bg-slate-800 text-slate-500 border border-slate-700"}`}>
-          {participant.name.substring(0, 2).toUpperCase()}
-        </div>
+    return (
+      <div className="bg-slate-800 border border-slate-700 rounded-2xl p-3 md:p-4 flex items-center gap-3 md:gap-4 shadow-sm hover:border-slate-600 transition-colors min-w-0">
+        <div className={`${color} bg-current/10 p-2 md:p-2.5 rounded-xl shrink-0`}>{icon}</div>
         <div className="min-w-0">
-          <p className="font-bold text-xs md:text-sm text-slate-200 truncate">{participant.name}</p>
-          <p className="text-[8px] md:text-[10px] text-slate-500 uppercase font-bold truncate">{participant.division || "Umum"}</p>
+          <p className="text-[8px] md:text-[10px] text-slate-500 uppercase font-black tracking-widest truncate">{label}</p>
+          <p className="text-xs md:text-sm font-bold truncate text-slate-200">{value}</p>
         </div>
       </div>
-      <span className="shrink-0 text-[9px] md:text-[10px] text-slate-500 font-mono bg-slate-950/50 px-2 md:px-3 py-1.5 rounded-lg border border-slate-800/50 ml-2">
-        {participant.time || "--:--"}
-      </span>
-    </div>
-  );
+    );
 }
-
+  
+function ParticipantRow({ participant, isPresent }: { participant: Participant, isPresent: boolean }) {
+    return (
+      <div className={`flex justify-between items-center p-3 md:p-4 rounded-xl md:rounded-2xl border ${isPresent ? "bg-emerald-500/5 border-emerald-500/10" : "bg-slate-900/60 border-slate-800"}`}>
+        <div className="flex items-center gap-3 md:gap-4 min-w-0">
+          <div className={`w-8 h-8 md:w-10 md:h-10 shrink-0 rounded-full flex items-center justify-center text-[10px] md:text-xs font-black ${isPresent ? "bg-emerald-600 text-white" : "bg-slate-800 text-slate-500 border border-slate-700"}`}>
+            {participant.name.substring(0, 2).toUpperCase()}
+          </div>
+          <div className="min-w-0">
+            <p className="font-bold text-xs md:text-sm text-slate-200 truncate">{participant.name}</p>
+            <p className="text-[8px] md:text-[10px] text-slate-500 uppercase font-bold truncate">{participant.division || "Umum"}</p>
+          </div>
+        </div>
+        <span className="shrink-0 text-[9px] md:text-[10px] text-slate-500 font-mono bg-slate-950/50 px-2 md:px-3 py-1.5 rounded-lg border border-slate-800/50 ml-2">
+          {participant.time || "--:--"}
+        </span>
+      </div>
+    );
+}
+  
 function EmptyState({ text }: { text: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-8 md:py-12 text-slate-700 text-center">
-      <Users size={32} className="mb-3 opacity-10" />
-      <p className="text-[10px] italic font-bold tracking-widest uppercase opacity-40">{text}</p>
-    </div>
-  );
+    return (
+      <div className="flex flex-col items-center justify-center py-8 md:py-12 text-slate-700 text-center">
+        <Users size={32} className="mb-3 opacity-10" />
+        <p className="text-[10px] italic font-bold tracking-widest uppercase opacity-40">{text}</p>
+      </div>
+    );
 }
