@@ -127,18 +127,14 @@ export default function VerificationScanPage() {
     }
   };
 
-// --- TAMPILAN SETELAH SELESAI SCAN (UI PREMIUM & NYAMBUNG) ---
   if (status === "success") return (
     <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-white relative overflow-hidden">
-      
-      {/* 1. Background Glow - Menggunakan warna Biru yang sama dengan Header */}
       <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-96 h-96 bg-blue-600/20 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute bottom-[-10%] right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-[100px] pointer-events-none" />
 
       <div className="w-full max-w-sm z-10 animate-in fade-in zoom-in duration-500">
         <div className="bg-slate-900/40 backdrop-blur-2xl border border-blue-500/20 p-10 rounded-[3rem] shadow-2xl shadow-black/50 flex flex-col items-center text-center">
           
-          {/* 2. Icon Container - Perpaduan Biru dan Hijau (Emerald) */}
           <div className="relative mb-8">
             <div className="absolute inset-0 bg-emerald-500/20 rounded-full blur-2xl animate-pulse" />
             <div className="relative bg-slate-950 border border-emerald-500/40 w-24 h-24 rounded-full flex items-center justify-center shadow-[inset_0_0_20px_rgba(16,185,129,0.1)]">
@@ -146,7 +142,6 @@ export default function VerificationScanPage() {
             </div>
           </div>
 
-          {/* 3. Typography - Menggunakan Skema Warna Slate & Blue */}
           <h1 className="text-2xl font-black uppercase tracking-tighter mb-2 bg-gradient-to-b from-white to-blue-200 bg-clip-text text-transparent">
             Presensi Berhasil
           </h1>
@@ -157,26 +152,19 @@ export default function VerificationScanPage() {
             Selamat mengikuti kegiatan hari ini
           </p>
           
-          {/* <p className="text-slate-500 text-[10px] uppercase tracking-[0.25em] font-black">
-            Verified by Digital System
-          </p> */}
-
-          {/* 4. Event Detail Card - Agar nyambung dengan info di depan */}
           <div className="mt-8 pt-6 border-t border-blue-500/10 w-full group">
-             <div className="bg-slate-950/50 rounded-2xl p-4 border border-blue-500/5 transition-colors group-hover:border-blue-500/20">
-                <p className="text-[9px] text-blue-500 font-black uppercase tracking-widest mb-1 text-left">Agenda Anda</p>
-                <p className="text-xs font-bold text-slate-300 truncate text-left">{eventData.title}</p>
+             <div className="bg-slate-950/50 rounded-2xl p-4 border border-blue-500/5 transition-colors group-hover:border-blue-500/20 text-left">
+                <p className="text-[9px] text-blue-500 font-black uppercase tracking-widest mb-1">Agenda Anda</p>
+                <p className="text-xs font-bold text-slate-300 line-clamp-2">{eventData.title}</p>
              </div>
           </div>
 
-          {/* 5. Action Button - Biru yang identik dengan Header depan */}
           <button 
             onClick={() => window.location.reload()} 
             className="mt-10 w-full py-5 bg-blue-600 hover:bg-blue-500 text-white rounded-[1.5rem] text-[10px] font-black tracking-[0.2em] uppercase transition-all shadow-lg shadow-blue-900/20 active:scale-95"
           >
             SELESAI
           </button>
-
         </div>
         
         <p className="text-center mt-8 text-slate-800 text-[9px] font-bold uppercase tracking-widest">
@@ -190,7 +178,7 @@ export default function VerificationScanPage() {
     <div className="min-h-screen bg-slate-950 text-white p-6 font-sans">
       <div className="max-w-md mx-auto pt-4 space-y-6">
         
-        {/* --- HEADER DINAMIS (JUDUL, JAM, LOKASI KIRI-KANAN) --- */}
+        {/* --- HEADER DINAMIS DENGAN FIX WRAP UNTUK MOBILE --- */}
         <div className="bg-blue-600/10 border border-blue-500/20 rounded-[2rem] p-6 shadow-2xl shadow-blue-900/10">
           <div className="flex items-start gap-4">
             <div className="p-3 bg-blue-600 rounded-2xl shadow-lg shrink-0">
@@ -198,22 +186,23 @@ export default function VerificationScanPage() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Agenda Rapat</p>
-              <h1 className="font-bold text-xl leading-tight mb-3 truncate">
+              <h1 className="font-bold text-xl leading-tight mb-3">
                 {eventData.title || "Memuat Agenda..."}
               </h1>
               
-              {/* Flex Row untuk Jam dan Tempat sejajar samping */}
-              <div className="flex flex-row items-center gap-4 border-t border-blue-500/10 pt-3">
+              {/* Container Jam & Lokasi: Menggunakan flex-wrap agar tidak terpotong di HP */}
+              <div className="flex flex-wrap items-center gap-y-2 gap-x-4 border-t border-blue-500/10 pt-3">
                 <div className="flex items-center gap-2 text-[11px] text-slate-300 font-medium shrink-0">
                   <Clock size={14} className="text-blue-500 shrink-0" />
                   <span>{eventData.timeOnly || "..."}</span>
                 </div>
                 
-                <div className="h-3 w-[1px] bg-slate-700"></div>
+                {/* Divider vertical: disembunyikan di layar sangat kecil jika wrap terjadi */}
+                <div className="hidden sm:block h-3 w-[1px] bg-slate-700"></div>
 
                 <div className="flex items-center gap-2 text-[11px] text-slate-300 font-medium min-w-0">
                   <MapPin size={14} className="text-blue-500 shrink-0" />
-                  <span className="truncate">{eventData.location || "..."}</span>
+                  <span className="leading-tight">{eventData.location || "..."}</span>
                 </div>
               </div>
             </div>
