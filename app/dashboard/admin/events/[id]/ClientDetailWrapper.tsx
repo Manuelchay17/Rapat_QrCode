@@ -13,11 +13,14 @@ import {
   UserRoundCheck,
   X,
   Printer,
-  Info
+  Info,
+  Lock,   // Tambah icon Lock
+  Unlock  // Tambah icon Unlock
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
+import { toggleManualOpenAction } from "../_actions"; // Penambahan: Import Server Action
 
 interface EventData {
   id: string;
@@ -28,6 +31,7 @@ interface EventData {
   time: string;
   endTime?: string | null;
   rapat_type: "with_reg" | "no_reg";
+  isManualOpen?: boolean; // Penambahan: Field isManualOpen
 }
 
 interface Participant {
@@ -47,6 +51,11 @@ export default function ClientDetailWrapper({ eventData }: ClientDetailWrapperPr
   const [copied, setCopied] = useState<boolean>(false);
   const [activeModal, setActiveModal] = useState<"hadir" | "belum" | null>(null);
   const [mounted, setMounted] = useState(false);
+
+  // --- Penambahan State Baru ---
+  const [isManualOpen, setIsManualOpen] = useState(eventData.isManualOpen);
+  const [isToggling, setIsToggling] = useState(false);
+  // -----------------------------
 
   const isNoReg = eventData.rapat_type === "no_reg";
 
@@ -83,6 +92,20 @@ export default function ClientDetailWrapper({ eventData }: ClientDetailWrapperPr
     return () => clearInterval(interval);
   }, [eventData.id]);
 
+  // --- Penambahan Fungsi Toggle ---
+  const handleToggleAkses = async () => {
+    setIsToggling(true);
+    const newStatus = !isManualOpen;
+    const res = await toggleManualOpenAction(eventData.id, newStatus);
+    if (res.success) {
+      setIsManualOpen(newStatus);
+    } else {
+      alert("Gagal mengubah status akses");
+    }
+    setIsToggling(false);
+  };
+  // --------------------------------
+
   const presentOnly = participants.filter(p => p.status === "present");
   const registeredOnly = participants.filter(p => p.status !== "present");
 
@@ -97,25 +120,11 @@ export default function ClientDetailWrapper({ eventData }: ClientDetailWrapperPr
   const downloadPosterPDF = async () => {
     const element = document.getElementById("qr-poster-template");
     if (!element) return;
-
     element.style.display = "block";
-
     try {
-      const canvas = await html2canvas(element, {
-        scale: 2, 
-        useCORS: true,
-        logging: false,
-        backgroundColor: "#ffffff" // Background putih untuk hemat tinta
-      });
-      
+      const canvas = await html2canvas(element, { scale: 2, useCORS: true, logging: false, backgroundColor: "#ffffff" });
       const imgData = canvas.toDataURL("image/jpeg", 0.6); 
-      const pdf = new jsPDF({
-        orientation: "portrait",
-        unit: "mm",
-        format: "a4",
-        compress: true 
-      });
-
+      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4", compress: true });
       pdf.addImage(imgData, "JPEG", 0, 0, 210, 297, undefined, 'FAST');
       pdf.save(`Poster_QR_${eventData.title.replace(/\s+/g, '_')}.pdf`);
     } catch (err) {
@@ -127,18 +136,30 @@ export default function ClientDetailWrapper({ eventData }: ClientDetailWrapperPr
 
   const formatIndoDate = (dateStr: string) => {
     try {
-      return new Date(dateStr).toLocaleDateString('id-ID', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric'
-      });
+      return new Date(dateStr).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
     } catch { return dateStr; }
   };
 
   return (
     <div className="space-y-6 md:space-y-8 relative">
-      {/* Header Buttons */}
+      
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 mb-2 md:absolute md:-top-16 md:right-0">
+        
+        {/* --- Penambahan Tombol Buka Akses --- */}
+        <button 
+          disabled={isToggling}
+          onClick={handleToggleAkses}
+          className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl shadow-lg transition-all active:scale-95 text-sm font-bold border ${
+            isManualOpen 
+            ? "bg-emerald-600 border-emerald-400 text-white" 
+            : "bg-amber-600/20 border-amber-500/50 text-amber-500 hover:bg-amber-600/30"
+          }`}
+        >
+          {isManualOpen ? <Unlock size={18} /> : <Lock size={18} />}
+          {isManualOpen ? "Akses Terbuka" : "Buka Akses Manual"}
+        </button>
+        {/* ------------------------------------ */}
+
         <button 
           onClick={() => window.open(`/rekap/${eventData.id}`, '_blank')}
           className="flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg transition-all active:scale-95 text-sm font-bold"
@@ -158,7 +179,6 @@ export default function ClientDetailWrapper({ eventData }: ClientDetailWrapperPr
         )}
       </div>
 
-      {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
         <InfoItem icon={<CalendarDays size={18} />} label="Tanggal" value={formatIndoDate(eventData.dateRaw)} />
         <InfoItem icon={<Clock size={18} />} label="Waktu" value={`${eventData.time} - ${eventData.endTime || "Selesai"}`} />
@@ -166,6 +186,17 @@ export default function ClientDetailWrapper({ eventData }: ClientDetailWrapperPr
         <InfoItem icon={<UserRoundCheck size={18} />} label="Hadir" value={`${presentOnly.length}`} color="text-emerald-400" />
         <InfoItem icon={<Users size={18} />} label="Total" value={`${participants.length}`} color="text-blue-400" />
       </div>
+      {eventData.description && (
+  <div className="bg-slate-800/40 border border-slate-700/50 rounded-[1.3rem] p-5 md:p-7 shadow-sm">
+    <div className="flex items-center gap-2 mb-4 text-slate-500">
+      <Info size={16} className="text-blue-400" />
+      <h3 className="text-[10px] font-black uppercase tracking-widest">Deskripsi Acara</h3>
+    </div>
+    <div className="text-slate-300 text-sm md:text-base leading-relaxed whitespace-pre-wrap">
+      {eventData.description}
+    </div>
+  </div>
+)}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1">
@@ -219,107 +250,31 @@ export default function ClientDetailWrapper({ eventData }: ClientDetailWrapperPr
         </div>
       </div>
 
- 
-
-<div 
-  id="qr-poster-template" 
-  style={{ 
-    display: 'none', 
-    width: '210mm', 
-    height: '297mm', 
-    position: 'fixed', 
-    top: '-10000px', 
-    left: '-10000px',
-    backgroundColor: '#ffffff'
-  }} 
->
-  <div 
-    style={{ 
-      height: '100%', 
-      width: '100%', 
-      padding: '12mm', // Padding luar sedikit diperkecil agar border terlihat formal
-      display: 'flex', 
-      flexDirection: 'column', 
-      fontFamily: 'sans-serif',
-      color: '#000000'
-    }}
-  >
-    {/* GARIS PINGGIR KEMBALI DIHADIRKAN & DIPERTEGAS */}
-    <div style={{ 
-      border: '2px solid #000000', // Border hitam pekat (Hitam Putih)
-      height: '100%', 
-      display: 'flex', 
-      flexDirection: 'column', 
-      alignItems: 'center',
-      padding: '20mm 15mm' // Jarak konten dari border dirapatkan
-    }}>
-      
-      {/* SECTION ATAS - INSTRUKSI DIREPET (RAPIH) */}
-      <div style={{ marginBottom: '15mm', textAlign: 'center', width: '100%' }}>
-        <h1 style={{ 
-          fontSize: '60px', // Ukuran diperbesar sedikit dari respon sebelumnya
-          fontWeight: '900', 
-          lineHeight: '1.1', 
-          margin: '0', 
-          letterSpacing: '-1.5px',
-          color: '#000000'
-        }}>
-          SILAKAN SCAN <br /> DI SINI
-        </h1>
-        <p style={{ 
-          fontSize: '20px', 
-          marginTop: '6mm', 
-          color: '#333333', // Abu tua (tetap grayscale)
-          maxWidth: '150mm', 
-          margin: '6mm auto 0 auto',
-          lineHeight: '1.5' 
-        }}>
-          Arahkan kamera smartphone Anda ke kode QR untuk mengisi daftar hadir rapat secara digital.
-        </p>
-      </div>
-
-      {/* SECTION TENGAH - AREA QR CODE (FOKUS UTAMA) */}
-      <div style={{ 
-        flex: '1', 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        width: '100%' 
-      }}>
-        {/* Border halus di sekitar QR dipertegas */}
-        <div style={{ 
-          display: 'inline-block',
-          padding: '10mm', 
-          border: '2px solid #000000', 
-          borderRadius: '24px',
-          backgroundColor: '#ffffff'
-        }}>
-          {mounted && (
-            <QRCodeSVG 
-              id="qr-code-svg-poster" // Beri ID unik agar tidak konflik
-              value={qrUrl} 
-              size={480} // Ukuran diperbesar untuk mengisi ruang
-              level="H" 
-              fgColor="#000000" 
-              bgColor="#ffffff" 
-              includeMargin={false}
-            />
-          )}
+      {/* Poster Template */}
+      <div id="qr-poster-template" style={{ display: 'none', width: '210mm', height: '297mm', position: 'fixed', top: '-10000px', left: '-10000px', backgroundColor: '#ffffff' }} >
+        <div style={{ height: '100%', width: '100%', padding: '12mm', display: 'flex', flexDirection: 'column', fontFamily: 'sans-serif', color: '#000000' }} >
+          <div style={{ border: '2px solid #000000', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '20mm 15mm' }}>
+            <div style={{ marginBottom: '15mm', textAlign: 'center', width: '100%' }}>
+              <h1 style={{ fontSize: '60px', fontWeight: '900', lineHeight: '1.1', margin: '0', letterSpacing: '-1.5px', color: '#000000' }}>
+                SILAKAN SCAN <br /> DI SINI
+              </h1>
+              <p style={{ fontSize: '20px', marginTop: '6mm', color: '#333333', maxWidth: '150mm', margin: '6mm auto 0 auto', lineHeight: '1.5' }}>
+                Arahkan kamera smartphone Anda ke kode QR untuk mengisi daftar hadir rapat secara digital.
+              </p>
+            </div>
+            <div style={{ flex: '1', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+              <div style={{ display: 'inline-block', padding: '10mm', border: '2px solid #000000', borderRadius: '24px', backgroundColor: '#ffffff' }}>
+                {mounted && (
+                  <QRCodeSVG id="qr-code-svg-poster" value={qrUrl} size={480} level="H" fgColor="#000000" bgColor="#ffffff" includeMargin={false} />
+                )}
+              </div>
+            </div>
+            <div style={{ marginTop: '15mm', width: '100%', textAlign: 'center' }}>
+              <div style={{ width: '80mm', height: '1.5px', backgroundColor: '#000000', margin: '0 auto 15mm auto' }}></div>
+            </div>
+          </div>
         </div>
       </div>
-
-      {/* SECTION BAWAH (MINIMALIS Tanpa Judul Rapat) */}
-      <div style={{ marginTop: '15mm', width: '100%', textAlign: 'center' }}>
-        {/* Garis pemisah tipis tetap dipertahankan */}
-        <div style={{ width: '80mm', height: '1.5px', backgroundColor: '#000000', margin: '0 auto 15mm auto' }}></div>
-        
-    
-        
-      </div>
-
-    </div>
-  </div>
-</div>
 
       {/* Modal Detail */}
       {activeModal && (
@@ -342,7 +297,7 @@ export default function ClientDetailWrapper({ eventData }: ClientDetailWrapperPr
   );
 }
 
-// ... (Sub-komponen InfoItem, ParticipantRow, EmptyState tetap sama seperti sebelumnya)
+// Sub-komponen (Tetap Sama)
 function InfoItem({ icon, label, value, color = "text-blue-400" }: { icon: React.ReactNode, label: string, value: string, color?: string }) {
     return (
       <div className="bg-slate-800 border border-slate-700 rounded-2xl p-3 md:p-4 flex items-center gap-3 md:gap-4 shadow-sm hover:border-slate-600 transition-colors min-w-0">

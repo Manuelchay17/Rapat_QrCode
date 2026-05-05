@@ -97,30 +97,59 @@ export default function EventsPage() {
 
   return (
     <div className="space-y-8 relative text-white min-h-screen pb-20">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-white">Dataset Rapat</h1>
-          <p className="text-slate-400 text-sm">Kelola rapat dan absensi peserta</p>
-        </div>
+      {/* Bagian Header Dataset Rapat */}
+<div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+  {/* Perubahan: text-center di mobile, text-left di desktop */}
+  <div className="text-center md:text-left space-y-1">
+    <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight">
+      Dataset Rapat
+    </h1>
+    <p className="text-slate-400 text-xs md:text-sm font-medium">
+      Kelola rapat dan absensi peserta secara real-time
+    </p>
+  </div>
 
-        <div className="flex items-center gap-3">
-          <div className="flex items-center bg-slate-800 border border-slate-700 rounded-xl p-1 shadow-sm">
-            <select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="bg-transparent text-[11px] font-bold px-3 py-2 outline-none cursor-pointer">
-              <option value="all" className="bg-slate-900">Semua Bulan</option>
-              {months.map((m, i) => <option key={i} value={i} className="bg-slate-900">{m}</option>)}
-            </select>
-            <div className="w-[1px] h-4 bg-slate-700 mx-1"></div>
-            <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className="bg-transparent text-[11px] font-bold px-3 py-2 outline-none cursor-pointer">
-              <option value="all" className="bg-slate-900">Semua Tahun</option>
-              {years.map(y => <option key={y} value={y} className="bg-slate-900">{y}</option>)}
-            </select>
-          </div>
+  {/* Filter & Tombol: Ikut rata tengah di mobile */}
+  <div className="flex flex-row items-center justify-center md:justify-end gap-3">
+    {/* Container Filter & Tombol - Dibuat W-FULL agar space terpakai semua */}
+<div className="flex items-center justify-center gap-2 w-full max-w-md mx-auto">
+  
+  {/* Filter Bulan & Tahun - Dibuat flex-1 agar ukurannya proporsional */}
+  <div className="flex-1 flex items-center bg-slate-800/80 backdrop-blur-sm border border-slate-700 rounded-xl p-1 shadow-inner min-w-0">
+    <select 
+      value={selectedMonth} 
+      onChange={(e) => setSelectedMonth(e.target.value)} 
+      className="flex-1 bg-transparent text-[10px] font-bold px-2 py-2 outline-none cursor-pointer text-slate-300 truncate"
+    >
+      <option value="all" className="bg-slate-900">Bulan</option>
+      {months.map((m, i) => <option key={i} value={i} className="bg-slate-900">{m}</option>)}
+    </select>
+    <div className="w-[1px] h-4 bg-slate-700"></div>
+    <select 
+      value={selectedYear} 
+      onChange={(e) => setSelectedYear(e.target.value)} 
+      className="flex-1 bg-transparent text-[10px] font-bold px-2 py-2 outline-none cursor-pointer text-slate-300"
+    >
+      <option value="all" className="bg-slate-900">Tahun</option>
+      {years.map(y => <option key={y} value={y} className="bg-slate-900">{y}</option>)}
+    </select>
+  </div>
 
-          <button onClick={openCreateModal} className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 transition text-sm font-bold shadow-lg flex items-center gap-2">
-            <span className="text-lg">+</span> Buat Event
-          </button>
-        </div>
-      </div>
+  {/* Tombol Buat Event - Sekarang pakai teks di mobile dengan whitespace-nowrap */}
+  <button 
+    onClick={openCreateModal} 
+    className="h-10 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 transition shadow-lg flex items-center justify-center gap-2 shrink-0 active:scale-95"
+  >
+    <span className="text-lg font-bold">+</span>
+    <span className="text-[11px] font-bold uppercase tracking-tight whitespace-nowrap">
+      Buat Event
+    </span>
+  </button>
+</div>
+
+   
+  </div>
+</div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {filteredEvents.map((event) => {
@@ -150,7 +179,7 @@ export default function EventsPage() {
                         {isPast ? "Selesai" : "Aktif"}
                       </span>
                     </div>
-                    <p className="mb-4 text-sm text-slate-400 line-clamp-2 italic">{event.description || "Tidak ada deskripsi."}</p>
+                    {/* <p className="mb-4 text-sm text-slate-400 line-clamp-2 italic">{event.description || "Tidak ada deskripsi."}</p> */}
                     <div className="space-y-3 text-sm text-slate-300">
                       <div className="flex items-center gap-3">
                         <CalendarDays size={16} className="text-slate-500" />

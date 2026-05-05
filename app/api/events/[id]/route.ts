@@ -20,6 +20,7 @@ export async function GET(
         dateRaw: true,     // Tanggal
         time: true,      // Jam Mulai
   endTime: true,   // Jam Selesai
+  isManualOpen: true,
       }
     });
 

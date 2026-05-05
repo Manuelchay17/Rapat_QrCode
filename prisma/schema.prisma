@@ -19,6 +19,7 @@ model Event {
   status       String    @default("active")
   createdAt    DateTime  @default(now())
   rapat_type   String    @default("with_reg")
+  isManualOpen Boolean  @default(false) // Tambahkan ini
   absensi      Absensi[]
 }
 

@@ -94,3 +94,21 @@ export async function updateEventAction(id: string, formData: FormData) {
     throw new Error(error.message || "Gagal memperbarui data");
   }
 }
+// TAMBAHKAN INI DI BAGIAN PALING BAWAH FILE _actions.ts
+
+export async function toggleManualOpenAction(id: string, isOpen: boolean) {
+  try {
+    await prisma.event.update({
+      where: { id },
+      data: { 
+        isManualOpen: isOpen 
+      },
+    });
+
+    revalidatePath("/dashboard/admin/events");
+    return { success: true };
+  } catch (error) {
+    console.error("Gagal mengubah status akses:", error);
+    return { success: false };
+  }
+}
